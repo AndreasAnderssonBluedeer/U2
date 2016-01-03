@@ -22,7 +22,7 @@ public class Flipper {
       int width  = img.getWidth();
       int height = img.getHeight();
        //Create a new Image with same size.TYPE_BYTE GRAY??? Färg/Gråskala?
-      this.flip = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB); //BufferedImage.TYPE_BYTE_GRAY);
+      this.flip = new BufferedImage(width, height, BufferedImage.TYPE_BYTE_GRAY);//BufferedImage.TYPE_INT_RGB);
 
        //Skapa raster?
       WritableRaster imgraster  = img.getRaster();
@@ -33,7 +33,7 @@ public class Flipper {
       for (int row=0; row<width; row++)
           for (int col=0; col<height; col++) {
               int value = imgraster.getSample(row,col,0);
-              flipraster.setSample(row,col,0, 200-value );
+              flipraster.setSample(row,col,0, 255-value );
           }
    }
    
