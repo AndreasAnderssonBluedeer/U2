@@ -10,6 +10,9 @@ import java.io.IOException;
 public class Controller {
 
     public Controller(){
+        CannysMethod cm=new CannysMethod();
+        cm.hysteresis();
+
         JFileChooser jc= new JFileChooser();
         jc.showOpenDialog(null);
         String file= jc.getSelectedFile().getPath();
