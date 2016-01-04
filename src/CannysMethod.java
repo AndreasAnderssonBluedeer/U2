@@ -1,5 +1,6 @@
 import javax.swing.*;
 import java.awt.image.BufferedImage;
+import java.awt.image.WritableRaster;
 
 /**
  * Created by Andreas on 2015-12-10.
@@ -72,14 +73,50 @@ public class CannysMethod {
         }
     }
     //Tar emot högt och lågt tröskelvärde.
-    public void hysteresis(){
+    public WritableRaster hysteresis(WritableRaster raster){
         int lowThreshold,highTreshold;
 
         lowThreshold=Integer.parseInt(JOptionPane.showInputDialog("Mata in ett tal mellan 0-255 för Low Threshold."));
         highTreshold=Integer.parseInt(JOptionPane.showInputDialog("Mata in ett tal mellan 0-255 för High Threshold som" +
                 " är större än Low Threshold:"+lowThreshold));
+        //För varje pixel i rasteret.
+        for(int row=0; row<raster.getHeight(); row++){
+            for (int col=0; col<raster.getWidth(); col++){
+                //If pixel is higher than the high threshold
+                if( raster.getSample(col,row,0)>=highTreshold){
+                    //Do nothing, we're gonna keep it.
+                    //Maybe maximize the value?
+                }
+                //If pixel is lower than the low threshold, set pixel to 0. (this pixel will not be used)
+                else if (raster.getSample(col,row,0)<=lowThreshold){
+                    raster.setSample(col,row,0,0);
+                }
+                //If the pixel is in between the two thresholds-> check if it should be used
+                //Is it a neighbour to a high threshold pixel?
+                else {
+                        int i=row-1,k=col-1;
+                        boolean neighbour=false;
+                        while(i<=row+1){
+                            while (k<=col+1){
+                                //if its not a pixel at the end/edge of the image. To prevent out of bounds.
+                                if (i>0 && i < raster.getHeight() &&
+                                        k>0 && k < raster.getWidth()) {
+                                    if (raster.getSample(k, i, 0) >= highTreshold) {
+                                        neighbour = true;
+                                    }
+                                }
+                                k++;
+                            }
+                            i++;
+                        }
+                        //If there wasn't any high threshold neighbour-> delete it.
+                        if (!neighbour){
+                            raster.setSample(col,row,0,0);
+                        }
 
-
-
+                }
+            }
+        }
+        return raster;
     }
 }

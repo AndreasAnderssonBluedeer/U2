@@ -1,6 +1,7 @@
 import javax.imageio.ImageIO;
 import javax.swing.*;
 import java.awt.image.BufferedImage;
+import java.awt.image.WritableRaster;
 import java.io.File;
 import java.io.IOException;
 
@@ -11,7 +12,7 @@ public class Controller {
 
     public Controller(){
         CannysMethod cm=new CannysMethod();
-        cm.hysteresis();
+        //cm.hysteresis();
 
         JFileChooser jc= new JFileChooser();
         jc.showOpenDialog(null);
@@ -34,6 +35,12 @@ public class Controller {
 
         //Ta bort brus-> Gaussian Filter
     }
+    public WritableRaster hysteresis(WritableRaster raster){
+        CannysMethod cm=new CannysMethod();
+        //cm.edgeThinning();
+       return cm.hysteresis(raster);  //ska komma från edgethinningen sen.
+    }
+
     //Läs in bild, skicka ut bild och fixa kommunikation mellan klasserna.
 
     //Hämta bild

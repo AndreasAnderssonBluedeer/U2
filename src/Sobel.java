@@ -53,8 +53,18 @@ public class Sobel {
                 outPutRaster.setSample(i,j, 0, edge);
             }
         }
+
+
         try {
-			ImageIO.write(outputImg, "PNG", new File(file+".png"));
+			ImageIO.write(outputImg, "PNG", new File(file+"_sobel.png"));
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		CannysMethod cm=new CannysMethod();
+		outPutRaster=cm.hysteresis(outPutRaster);
+
+		try {
+			ImageIO.write(outputImg, "PNG", new File(file+"_hysteresis.png"));
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
