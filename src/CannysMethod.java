@@ -9,10 +9,6 @@ import java.util.ArrayList;
 public class CannysMethod {
     //Inkl Förtunning och Hysteresis.
 
-    public void gaussianFilter(BufferedImage img){
-        int[][] mask=new int [5][5];    //Gaussian filter (kernel size)mask, 5x5 is normally good.
-
-    }
     public WritableRaster edgeThinning(WritableRaster raster){
        // ta emot en bild med gradientmagnituder?
         // för var pixel i bilden( Array) så kontroller riktningen med en array/mask på 3x3 pixlar där center pixeln är

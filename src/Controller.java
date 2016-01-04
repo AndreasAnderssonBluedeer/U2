@@ -1,6 +1,8 @@
 import javax.imageio.ImageIO;
 import javax.swing.*;
+import java.awt.*;
 import java.awt.image.BufferedImage;
+import java.awt.image.ColorConvertOp;
 import java.awt.image.WritableRaster;
 import java.io.File;
 import java.io.IOException;
@@ -9,46 +11,80 @@ import java.io.IOException;
  * Created by Andreas on 2016-01-02.
  */
 public class Controller {
+    private BufferedImage inputImg; //outputImg
+    private WritableRaster inPutRaster,outputRaster;
 
-    public Controller(){
-        CannysMethod cm=new CannysMethod();
-        //cm.hysteresis();
+    public Controller() {
 
-        JFileChooser jc= new JFileChooser();
-        jc.showOpenDialog(null);
-        String file= jc.getSelectedFile().getPath();
-        try {
-            //Skapa en bufferedImage som läser in filen
-            BufferedImage img  = ImageIO.read(new File(file));
-            //Kör klassen med bilden.
-            ContourDetector cd=new ContourDetector(img);
-            cd.convolution();
-            Flipper flipper = new Flipper(img);
+        int choice=Integer.parseInt(JOptionPane.showInputDialog("1- Konturdetektering\n2- Bildsegmentering"));
 
-            //Skriv ut den "nya bilden/kopian". som PNG.
-           ImageIO.write(flipper.getFlippedImage(), "PNG", new File(file+"_flip"+".png"));
-            //flipper.getFlippedImage() hämta den förändrade bilden.
-            //*** FLIPPA FÄRGER OCH GJORT TILL GRÅSKALA MED BRUS KVAR.***
-        } catch (IOException e) {
-            System.out.println("Failed processing!\n"+e.toString());
+        switch (choice){
+            case 1:
+                try {   //inläsning bild
+                    JFileChooser jc = new JFileChooser();
+                    jc.showOpenDialog(null);
+                    String file = jc.getSelectedFile().getPath();
+                    this.inputImg = ImageIO.read(new File(file));
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                inPutRaster = convertToGray(inputImg);
+                new ImagePanel(inPutRaster,"Step 1-To Gray");
+
+                Gauss g = new Gauss();
+                outputRaster = g.filter(inPutRaster);
+                new ImagePanel(outputRaster,"Step 2-Gaussian-Filter");
+
+                Sobel s = new Sobel();
+                outputRaster = s.convolution(inPutRaster);
+                new ImagePanel(outputRaster,"Step 3-Sobel");
+
+                CannysMethod cm = new CannysMethod();
+                outputRaster = cm.edgeThinning(outputRaster);
+                new ImagePanel(outputRaster,"Step 4-Edge Thinning");
+
+                outputRaster = cm.hysteresis(outputRaster);
+                new ImagePanel(outputRaster,"Step 5-Hysteresis");
+
+            break;
+            case 2:
+            //Segmentering....
+            break;
+            }
         }
 
-        //Ta bort brus-> Gaussian Filter
-    }
-    public WritableRaster hysteresis(WritableRaster raster){
-        CannysMethod cm=new CannysMethod();
-        //cm.edgeThinning();
-       return cm.hysteresis(raster);  //ska komma från edgethinningen sen.
-    }
 
-    //Läs in bild, skicka ut bild och fixa kommunikation mellan klasserna.
+    public WritableRaster convertToGray(BufferedImage image) {
+        BufferedImage grayscale = new BufferedImage(image.getWidth(),image.getHeight(),
+                BufferedImage.TYPE_BYTE_GRAY);
+        ColorConvertOp op = new ColorConvertOp(
+                image.getColorModel().getColorSpace(),
+                grayscale.getColorModel().getColorSpace(),null);
+        op.filter(image,grayscale);
+        return grayscale.getRaster();
+    }
+    private class ImagePanel extends JPanel {
+        private final BufferedImage image;
 
-    //Hämta bild
-    //Skicka till konturdektektering-> Faltning/Gradient magnitud med Sobelkärnor.
-    //Canny's algoritm för förfining av kontur
-    //Välj Segmentering 1 eller 2
-    //Printa färdigt resultat.
-    // OBS+ PRINT I DE OLIKA STEGEN.
+        public ImagePanel(WritableRaster raster,String title) {
+            image=new BufferedImage(raster.getWidth(),raster.getHeight(),BufferedImage.TYPE_BYTE_GRAY);
+            image.setData(raster);
+            JFrame frame = new JFrame(title);
+            frame.add(this);
+            frame.pack();
+            frame.setSize(512, 512);
+            frame.setVisible(true);
+            frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+            setSize(512, 512);
+        }
+
+        public void paintComponent(Graphics g) {
+            Rectangle rect = this.getBounds();
+            if (image != null) {
+                g.drawImage(image, 0, 0, rect.width, rect.height, this);
+            }
+        }
+    }
 
     public static void main(String[] args) {
         Controller controller= new Controller();
