@@ -1,6 +1,7 @@
 import javax.swing.*;
 import java.awt.image.BufferedImage;
 import java.awt.image.WritableRaster;
+import java.util.ArrayList;
 
 /**
  * Created by Andreas on 2015-12-10.
@@ -12,67 +13,119 @@ public class CannysMethod {
         int[][] mask=new int [5][5];    //Gaussian filter (kernel size)mask, 5x5 is normally good.
 
     }
-    public void edgeThinning(int[][] picture){
+    public WritableRaster edgeThinning(WritableRaster raster){
        // ta emot en bild med gradientmagnituder?
         // för var pixel i bilden( Array) så kontroller riktningen med en array/mask på 3x3 pixlar där center pixeln är
         //den som ska kontrolleras.
         //Bilden är 2D
         //OutputPicture är "utdataBilden", Picture är Arrayen med Gradientvärdena (?).
         //picture[0].length=width(columns), picture.length=height (rows)
+        ArrayList<Double> degrees=new ArrayList<Double>();
 
-        BufferedImage outputPicture= new BufferedImage(picture[0].length, picture.length, BufferedImage.TYPE_BYTE_GRAY);
+        WritableRaster outRaster=raster;
 
-        // För varje pixel i bilden (-1 och +1 för att undvika "kantpixlarna"?)
-        for(int row=1; row < picture.length-1; row++){
-            for (int col=1; col < picture[row].length-1; col++){
-                float direction=0;
+        // För varje pixel i bilden (-1 och +1 för att undvika "kantpixlarna"?
+                int[][] matrix=new int[3][3];
+                for(int row=1;row<raster.getWidth()-1;row++) {
+                    for (int col = 1; col < raster.getHeight() - 1; col++) {
+                        // 3x3 matris med center punkt så 8 jämförelse positioner
+                        //hämta samples från dessa positioner
+                        matrix[0][0] = raster.getSample(row - 1, col - 1, 0);
+                        matrix[0][1] = raster.getSample(row - 1, col, 0);
+                        matrix[0][2] = raster.getSample(row - 1, col + 1, 0);
+                        matrix[1][0] = raster.getSample(row, col - 1, 0);
+                        matrix[1][2] = raster.getSample(row, col + 1, 0);
+                        matrix[2][0] = raster.getSample(row + 1, col - 1, 0);
+                        matrix[2][1] = raster.getSample(row + 1, col, 0);
+                        matrix[2][2] = raster.getSample(row + 1, col + 1, 0);
+
                 //beräkna gradient riktning? direction = 0,45,90,135?
+                //vertikal
+                double gy=(matrix[0][0]*-1)+(matrix[0][1]*-2)+(matrix[0][2]*-1)+(matrix[2][0])+(matrix[2][1]*2)+(matrix[2][2]);
+                //Horisontell
+                double gx=(matrix[0][0]*-1)+(matrix[0][2])+(matrix[1][0]*-2)+(matrix[1][2]*2)+(matrix[2][0]*-1)+(matrix[2][2]);
+                //riktningen
+                      //  double direction=Math.atan(gy/gx);
+                        Double direction=Math.atan2(gy,gx);
+                        direction=Math.toDegrees(direction);
+                        degrees.add(direction);
+
+
 
                 //Beroende på riktningen kontrollera om aktuell pixel ska användas.
-
+                //Värden mellan -180 och +180.
                 //Angle=0 -> Nord & Syd
-                if(direction==0){
-                    if(picture[row][col] < picture[row-1][col] || picture[row][col] < picture[row+1][col]){
-                      //  picture[row][col]=0; eller en specific utdata bild? outputPicture[row][col]=0;
-                        outputPicture.getRaster().setSample(row, col, 0, 0 );
+                        //Avgör vilket gradantal som ligger närmst direction.
+
+                //Om vinkeln är negativ gör den till motsvarande "positiv" vinkel. t.ex -45 == 135.
+                if(direction<0){
+                    //T.ex direction = 180+ (-45 (direction värdet)); =135, samma riktning.
+                    // bara att det går "ner-> upp" ist för "upp->ner".
+                    direction=180+direction;
+                }
+                //Avrunda direction till 0,45,90,135 eller 180.
+                int closestAngleDifference=200;    //Random nummer. ska vara större än eventuell grad skillnad till närmsta vinkel.
+                double closestDirection=0;
+                        int[] angles= {0,45,90,135,180};
+                        for (int i=0;i<angles.length;i++){
+                            //beräknad gradskillnaden mellan vinkel och riktning.
+                            int difference=0;
+                            difference=angles[i]-direction.intValue();
+                            if (difference<0){
+                                //Ex: difference= -5. -5--5*2 =5. positiv skillnad som är lättare att jämföra.
+                                difference=difference-difference*2;
+                            }
+                            //Är den nya skillnaden mindre än den sparade? Spara närmsta värdet.
+                            closestAngleDifference=Math.min(closestAngleDifference,difference);
+                            //Om den senaste beräkningen var närmst en vinkel-> spara det som närmsta riktningen.
+                          if (closestAngleDifference==difference){
+                              closestDirection=angles[i];
+                          }
+                        }
+                        direction=closestDirection;
+                //Avgör vad som ska göras med pixeln.
+                if(direction==0 || direction==180){
+                    if(raster.getSample(row,col,0) < raster.getSample(row-1,col,0) || raster.getSample(row,col,0) < raster.getSample(row+1,col,0)){
+                        outRaster.setSample(row, col, 0, 0 );
                     }
                     else{
-                        //outputPicture[row][col]=picture[row][col];
-                        outputPicture.getRaster().setSample(row, col, 0, picture[row][col] );
+                        outRaster.setSample(row, col, 0, raster.getSample(row,col,0) );
                     }
                 }
                 //Angle 45-> NordVäst & SydÖst.
                 else if (direction==45){
-                    if(picture[row][col] < picture[row-1][col-1] || picture[row][col] < picture[row+1][col+1]){
-                        outputPicture.getRaster().setSample(row, col, 0, 0 );
+                    if(raster.getSample(row,col,0) < raster.getSample(row-1,col-1,0) || raster.getSample(row,col,0) < raster.getSample(row+1,col+1,0)){
+                        outRaster.setSample(row, col, 0, 0 );
                     }
                     else{
-                        outputPicture.getRaster().setSample(row, col, 0, picture[row][col] );
+                        outRaster.setSample(row, col, 0, raster.getSample(row,col,0) );
                     }
                 }
                 //Angle = 90, dvs Väst och Öst.
                 else if (direction==90){
-                    if(picture[row][col] < picture[row][col-1] || picture[row][col] < picture[row][col+1]){
-                        outputPicture.getRaster().setSample(row, col, 0, 0 );
+                    if(raster.getSample(row,col,0) < raster.getSample(row,col-1,0) || raster.getSample(row,col,0) < raster.getSample(row,col+1,0)){
+                        outRaster.setSample(row, col, 0, 0 );
                     }
                     else{
-                        outputPicture.getRaster().setSample(row, col, 0, picture[row][col] );
+                        outRaster.setSample(row, col, 0, raster.getSample(row,col,0) );
                     }
                 }
                 //Angle= 135 -> NordÖst och SydVäst.
                 else if (direction==135){
-                    if(picture[row][col] < picture[row-1][col+1] || picture[row][col] < picture[row+1][col-1]){
-                        outputPicture.getRaster().setSample(row, col, 0, 0 );
+
+                    if(raster.getSample(row,col,0) < raster.getSample(row-1,col+1,0)|| raster.getSample(row,col,0) < raster.getSample(row+1,col-1,0)){
+                        outRaster.setSample(row, col, 0, 0 );
                     }
                     else{
-                        outputPicture.getRaster().setSample(row, col, 0, picture[row][col] );
+                        outRaster.setSample(row, col, 0, raster.getSample(row,col,0) );
                     }
                 }
-
             }
         }
+        return outRaster;
     }
-    //Tar emot högt och lågt tröskelvärde.
+
+    //KLAR!
     public WritableRaster hysteresis(WritableRaster raster){
         int lowThreshold,highTreshold;
 

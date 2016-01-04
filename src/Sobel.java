@@ -39,7 +39,9 @@ public class Sobel {
 	   
 	public void convolution(){
         for(int i=1;i<inputImg.getWidth()-1;i++){
-            for(int j=1;j<inputImg.getHeight()-1;j++){           	
+            for(int j=1;j<inputImg.getHeight()-1;j++){
+				// 3x3 matris med center punkt så 8 jämförelse positioner
+				//hämta samples från dessa positioner
                 matrix[0][0]= inPutRaster.getSample(i-1,j-1, 0);
                 matrix[0][1]= inPutRaster.getSample(i-1,j,0);
                 matrix[0][2]= inPutRaster.getSample(i-1,j+1,0);
@@ -49,8 +51,8 @@ public class Sobel {
                 matrix[2][1]= inPutRaster.getSample(i+1,j,0);
                 matrix[2][2]= inPutRaster.getSample(i+1,j+1,0);
                 
-                int edge= (int) convolutionKernels(matrix);
-                outPutRaster.setSample(i,j, 0, edge);
+                int edge= (int) convolutionKernels(matrix);	//för att räkna ut gradientmagnituden
+                outPutRaster.setSample(i,j, 0, edge);	//sätt pixeln (center) till resultatet.
             }
         }
 
@@ -61,6 +63,12 @@ public class Sobel {
 			e.printStackTrace();
 		}
 		CannysMethod cm=new CannysMethod();
+		outPutRaster=cm.edgeThinning(outPutRaster);
+		try {
+			ImageIO.write(outputImg, "PNG", new File(file+"_thinning.png"));
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 		outPutRaster=cm.hysteresis(outPutRaster);
 
 		try {
@@ -70,9 +78,13 @@ public class Sobel {
 		}
 	}
 	public double convolutionKernels(int[][]matrix){
-	    int gy=(matrix[0][0]*-1)+(matrix[0][1]*-2)+(matrix[0][2]*-1)+(matrix[2][0])+(matrix[2][1]*2)+(matrix[2][2]*1);
-	    int gx=(matrix[0][0])+(matrix[0][2]*-1)+(matrix[1][0]*2)+(matrix[1][2]*-2)+(matrix[2][0])+(matrix[2][2]*-1);
-	    return Math.sqrt(Math.pow(gy,2)+Math.pow(gx,2));
+		//sobel kärnor med förbestämt värde
+		//Vertikal
+		int gy=(matrix[0][0]*-1)+(matrix[0][1]*-2)+(matrix[0][2]*-1)+(matrix[2][0])+(matrix[2][1]*2)+(matrix[2][2]);
+		//Horisontell
+		int gx=(matrix[0][0]*-1)+(matrix[0][2])+(matrix[1][0]*-2)+(matrix[1][2]*2)+(matrix[2][0]*-1)+(matrix[2][2]);
+
+	    return Math.sqrt(Math.pow(gy,2)+Math.pow(gx,2));	//Gradient magnituden för pixeln.
 	}
 	
 	public static void main(String[] args) {
