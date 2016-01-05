@@ -1,3 +1,5 @@
+package segmentationTWO;
+
 /**
  * Created by Andreas on 2015-12-10.
  */
