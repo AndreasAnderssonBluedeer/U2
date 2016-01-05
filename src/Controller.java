@@ -22,7 +22,7 @@ public class Controller {
             case 1:
                 try {   //inläsning bild
                     JFileChooser jc = new JFileChooser();
-                    jc.showOpenDialog(null);
+                    jc.showDialog(null,"Öppna");
                     String file = jc.getSelectedFile().getPath();
                     this.inputImg = ImageIO.read(new File(file));
                 } catch (IOException e) {
