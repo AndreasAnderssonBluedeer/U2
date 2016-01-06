@@ -1,3 +1,5 @@
+import SplitAndMerge.SplitAndMergeAlgorithm;
+
 import javax.imageio.ImageIO;
 import javax.swing.*;
 import java.awt.*;
@@ -49,6 +51,21 @@ public class Controller {
             break;
             case 2:
             //Segmentering....
+                try {   //inläsning bild
+                    JFileChooser jc = new JFileChooser();
+                    jc.showDialog(null,"Öppna");
+                    String file = jc.getSelectedFile().getPath();
+                    this.inputImg = ImageIO.read(new File(file));
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                inPutRaster = convertToGray(inputImg);
+                new ImagePanel(inPutRaster,"Step 1-To Gray");
+
+                SplitAndMergeAlgorithm sm=new SplitAndMergeAlgorithm();
+                outputRaster=sm.SplitAndMergeAlgorithm(inPutRaster);
+                new ImagePanel(outputRaster,"Step 2-Split&Merge");
+
             break;
             }
         }
