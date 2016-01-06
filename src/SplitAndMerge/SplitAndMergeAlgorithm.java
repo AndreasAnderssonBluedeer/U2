@@ -23,7 +23,7 @@ public class SplitAndMergeAlgorithm {
         int [][] imagevalues =new int [inputRaster.getHeight()][inputRaster.getWidth()];
         for (int row=0;row<imagevalues.length;row++){
             for (int col=0;col<imagevalues[row].length;col++){
-                imagevalues[row][col]=inputRaster.getSample(row,col,0);
+                imagevalues[row][col]=inputRaster.getSample(col,row,0);
             }
         }
         regionList.add(new Region(imagevalues,0,0));    //int[][] och start värden X,Y
@@ -51,7 +51,7 @@ public class SplitAndMergeAlgorithm {
             for (int row = 0; row < workingRegion.length; row++) {
                 for (int col = 0; col < workingRegion[row].length; col++) {
                     //Om aktuell pixel är inom tröskelvärdet.-> region = true.. spara region!
-                    if (workingRegion[row][col] >= lowThres || workingRegion[row][col] <= highThres) {
+                    if (workingRegion[row][col] >= lowThres && workingRegion[row][col] <= highThres) {
                     //gör inget
                     } else {
                         withinThres=false;
@@ -76,57 +76,69 @@ public class SplitAndMergeAlgorithm {
         //Lagra arrayen då den kommer hanteras mycket.
         int[][] regionArray = region.getArray();
         //[0,0] [0,1] är width , [1,0] [1,1] är height
-       int[][] newRegionSizes= calculateRegionSizes(regionArray);
-        int width1,width2,height1,height2;
+        int[][] newRegionSizes = calculateRegionSizes(regionArray);
+        int width1, width2, height1, height2;
 
-        width1=newRegionSizes[0][0];
-        width2=newRegionSizes[0][1];
-        height1=newRegionSizes[1][0];
-        height2=newRegionSizes[1][1];
+        width1 = newRegionSizes[0][0];
+        width2 = newRegionSizes[0][1];
+        height1 = newRegionSizes[1][0];
+        height2 = newRegionSizes[1][1];
 
         //Skapa de fyra nya Regionerna:
         //Regionerna kanske inte är kvadratiska utan rektangulära med olika höjder och bredder så välj en gemensam höjd
         //med varsin bredd.
-        int [][] newRegion1=new int [height1][width1];
-        int [][] newRegion2=new int [height1][width2];
-        int [][] newRegion3=new int [height2][width1];
-        int [][] newRegion4=new int [height2][width2];
+        //Om det endast finns två pixlar att arbeta med låter vi dem vara.
+        //behöver lägga till dem i finRegionListan.-
+        if (width1 > 0 && width2 > 0 && height1 > 0 && height2 > 0) {
 
-        //Fyll arrayerna med dess värden och ange startpositioner i totala bilden för x&y
-        //Hämta värden från regionArray
-        //  |R1|R2|
-        //  |R3|R4| } tillsammans regionArray
-        for (int row=0;row<regionArray.length;row++){
-            for (int col=0;col<regionArray[row].length;col++){
-                //Region 2
-                if(row<height2 && col>width1){
-                    newRegion2[row][col-width1]=regionArray[row][col];
+            int[][] newRegion1 = new int[height1][width1];
+            int[][] newRegion2 = new int[height1][width2];
+            int[][] newRegion3 = new int[height2][width1];
+            int[][] newRegion4 = new int[height2][width2];
+
+            //Fyll arrayerna med dess värden och ange startpositioner i totala bilden för x&y
+            //Hämta värden från regionArray
+            //  |R1|R2|
+            //  |R3|R4| } tillsammans regionArray
+            for (int row = 0; row < regionArray.length; row++) {
+                for (int col = 0; col < regionArray[row].length; col++) {
+                    //Region 2
+                    if (row < height1 && col >= width1) {
+                        newRegion2[row][col - width1] = regionArray[row][col];
+                    }
+                    //Region 3
+                    else if (row >= height1 && col < width1) {
+                        newRegion3[row - height1][col] = regionArray[row][col];
+                    }
+                    //Region 4
+                    else if (row >= height1 && col >= width1) {
+                        newRegion4[row - height1][col - width1] = regionArray[row][col];
+                    }
+                    //Region 1
+                    else {
+                        newRegion1[row][col] = regionArray[row][col];
+                    }
                 }
-                //Region 3
-                else if(row > height1 && col < width2){
-                    newRegion3[row-height1][col]=regionArray[row][col];
-                }
-                //Region 4
-                else if(row > height1 && col > width1){
-                    newRegion4[row-height1][col-width1]=regionArray[row][col];
-                }
-                //Region 1
-                else{
-                    newRegion1[row][col]=regionArray[row][col];
+            }
+            //Lägg till de fyra nya regionerna i regionslistan.
+            regionList.add(new Region(newRegion1, region.getPosX() + 0, region.getPosY() + 0));
+            regionList.add(new Region(newRegion2, region.getPosX() + width1, region.getPosY() + 0));
+            regionList.add(new Region(newRegion3, region.getPosX() + 0, region.getPosY() + height1));
+            regionList.add(new Region(newRegion4, region.getPosX() + width1, region.getPosY() + height1));
+        }
+        //Om det endast finns två pixlar i arrayen-> dvs den går inte att splitta.
+        else {
+            for(int row=0;row<regionArray.length;row++){
+                for (int col=0;col<regionArray[row].length;col++){
+                    finRegionList.add(new FinishedRegion(1,1,regionArray[row][col]
+                            ,region.getPosX()+col,region.getPosY()+row));
                 }
             }
         }
-        //Lägg till de fyra nya regionerna i regionslistan.
-        regionList.add(new Region(newRegion1,region.getPosX()+0,region.getPosY()+0));
-        regionList.add(new Region(newRegion2,region.getPosX()+width1,region.getPosY()+0));
-        regionList.add(new Region(newRegion3,region.getPosX()+0,region.getPosY()+height1));
-        regionList.add(new Region(newRegion4,region.getPosX()+width1,region.getPosY()+height1));
-           }
-
+    }
 
     public int[][] calculateRegionSizes(int[][] regionArray){
          int[][] regionSize=new int[2][2];
-
         //[0,0] [0,1] är width , [1,0] [1,1] är height
         //Räkna ut regionsstorlekarna, dela på totalt antal pixlar med modolus.
         //Börja med bredden: (width) modolus 2 (bredden ska splittas på två) dvs bredden får exakt pixel antal/2
@@ -142,11 +154,11 @@ public class SplitAndMergeAlgorithm {
 
         //Återupprepa för height
         if (regionArray.length % 2 == 0) {
-            regionSize[1][0] = regionArray[0].length / 2;
-            regionSize[1][1] = regionArray[0].length / 2;
+            regionSize[1][0] = regionArray.length / 2;
+            regionSize[1][1] = regionArray.length / 2;
         } else {
-            regionSize[1][0]= regionArray[0].length / 2;
-            regionSize[1][1] = (regionArray[0].length / 2) + 1;
+            regionSize[1][0]= regionArray.length / 2;
+            regionSize[1][1] = (regionArray.length / 2) + 1;
         }
         return regionSize;
     }
@@ -161,8 +173,7 @@ public class SplitAndMergeAlgorithm {
             FinishedRegion temp=finRegionList.get(i);
             for (int row = 0; row < temp.getHeight(); row++) {
                 for (int col = 0; col < temp.getWidth(); col++) {
-                   // outputRaster.setSample(col+temp.getPosX(),row+temp.getPosY(),0,temp.getColorValue());
-                    outputRaster.setSample(col+temp.getPosX(),row+temp.getPosY(),0,150);
+                    outputRaster.setSample(col+temp.getPosX(),row+temp.getPosY(),0,temp.getColorValue());
                    // finalImgArray[row+temp.getPosY()][col+temp.getPosX()]=temp.getColorValue();
                 }
             }
