@@ -3,8 +3,11 @@ import java.awt.image.ColorConvertOp;
 import java.awt.image.WritableRaster;
 import java.io.*;      
 import javax.imageio.ImageIO;   
-import javax.swing.JFileChooser; 
-   
+import javax.swing.JFileChooser;
+/*
+ This class performs the convolution using a sobel core.
+ Created by Andreas Andersson & David Isberg on 2015-12-10.
+*/
 public class Sobel {   
 
 	public WritableRaster convolution(WritableRaster inPutRaster){

@@ -6,89 +6,96 @@ import java.awt.image.WritableRaster;
 import java.util.ArrayList;
 
 /**
- * Recieve Raster/input picture in grayscale. OBS FÖRÄNDRAR REGION KLASSERNA, ANPASSA!
- * Created by Andreas on 2015-12-10.
+ * Recieve Raster/input picture in grayscale.
+ * Performs image segmentation with split&merge algorithm.
+ * Created by Andreas Andersson & David Isberg on 2015-12-10.
  */
 public class SplitAndMergeAlgorithm {
 
-    private ArrayList<Region> regionList =new ArrayList<Region>();
-    private ArrayList<FinishedRegion> finRegionList=new ArrayList<FinishedRegion>();
+    private ArrayList<Region> regionList =new ArrayList<Region>();  //List with regions to test for possible split.
+    private ArrayList<FinishedRegion> finRegionList=new ArrayList<FinishedRegion>(); //List with finished regions to merge.
 
+    /**
+     * Constructor with Writableraster as input "picture" in gray scale.
+     * Returns the merge image as Raster.
+     * @param inputRaster- image as raster.
+     * @return WritableRaster
+     */
     public WritableRaster SplitAndMergeAlgorithm(WritableRaster inputRaster){
-        //Ange ett tröskelvärde som ska bli samma region
+        //Let the user pick a Threshold for the region values.
         int threshold=Integer.parseInt(JOptionPane.showInputDialog(null,"Mata in ett tröskelvärde för regionsdelning. 0-255 (Högre=färre regioner)" ));
 
-        //Om ett false ,dela i fyra nya.
-        //Lägga alla värden från bilden i en array
+        //Convert the raster with color values to an array.
         int [][] imagevalues =new int [inputRaster.getHeight()][inputRaster.getWidth()];
         for (int row=0;row<imagevalues.length;row++){
             for (int col=0;col<imagevalues[row].length;col++){
                 imagevalues[row][col]=inputRaster.getSample(col,row,0);
             }
         }
-        regionList.add(new Region(imagevalues,0,0));    //int[][] och start värden X,Y
-        int median=0;//init
-        //en arraylist som fylls på så fort arrayen splittas?
+        //Add it as the first Region to the regionlist.
+        regionList.add(new Region(imagevalues,0,0));
+        int average=0;
+       //While there is Regions to test.
        while(regionList.size()>0){
-            //Hämta ut arrayen att arbeta på:
+
+            //Get the array,total number of pixels and calculate Average value.
             int [][] workingRegion=regionList.get(0).getArray();
-            //Ta reda på antalet pixlar i arrayen för att beräkna median
             int totaltNbrofPixels = workingRegion.length * workingRegion[0].length;
-            //Kontrollera position i i regionList för att se om regionen är ok- ta bort efter kontroll?
             for (int row = 0; row < workingRegion.length; row++) {
                 for (int col = 0; col < workingRegion[row].length; col++) {
-                    median += workingRegion[row][col];
+                    average += workingRegion[row][col];
                 }
             }
-            //Totala pixelvärdet är beräknat, ta ut medianen.
-            median = median / totaltNbrofPixels;
+            average = average / totaltNbrofPixels;
             int highThres, lowThres;
-            //Bör threshold delas på 2? smak fråga..
-            highThres = median + threshold;
-            lowThres = median - threshold;
-            //ta reda på om hela regionen ligger inom tröskelvärdet.
+            //Set threshold in comparison to Average value.
+            highThres = average + threshold;
+            lowThres = average - threshold;
+
+            //Is this Region within the Average value?
             boolean withinThres=true;
             for (int row = 0; row < workingRegion.length; row++) {
                 for (int col = 0; col < workingRegion[row].length; col++) {
-                    //Om aktuell pixel är inom tröskelvärdet.-> region = true.. spara region!
                     if (workingRegion[row][col] >= lowThres && workingRegion[row][col] <= highThres) {
-                    //gör inget
+                    //The pixel is true compared to the Regions average value. Don't do anything.
                     } else {
                         withinThres=false;
                     }
                 }
             }
+           //If the region is okay-> save the region as "ready to merge".
            if(withinThres){
-               finRegionList.add(new FinishedRegion(workingRegion[0].length, workingRegion.length, median,
+               finRegionList.add(new FinishedRegion(workingRegion[0].length, workingRegion.length, average,
                        regionList.get(0).getPosX(),regionList.get(0).getPosY() ));
            }
+           //Else-> Split it.
            else{
-               split(regionList.get(0));   //Splittar regionen och lägger till de 4a nya regionerna i listan.
+               split(regionList.get(0));
            }
-           regionList.remove(0);   //färdig med denna Region, ta bort den.
+           //We're done with this region-> Remove it.
+           regionList.remove(0);
         }
-        //Merge and return the new raster
+        //Finally->Merge and return the new raster
         return merge(inputRaster.getWidth(), inputRaster.getHeight());
     }
-    //Param Region för att kontroller positionsvärden.
+
+    /**
+     * Splits a Region and put the new Regions in the regionlist.
+     * @param region- the region to split.
+     */
     public void split(Region region) {
-        //Splitta regionen till fyra nya "lika" delar.
-        //Lagra arrayen då den kommer hanteras mycket.
         int[][] regionArray = region.getArray();
-        //[0,0] [0,1] är width , [1,0] [1,1] är height
+        //[0,0] [0,1] =width values , [1,0] [1,1] height values
         int[][] newRegionSizes = calculateRegionSizes(regionArray);
         int width1, width2, height1, height2;
-
+        //Needs two different values since the split could resolve in "half pixels".
         width1 = newRegionSizes[0][0];
         width2 = newRegionSizes[0][1];
         height1 = newRegionSizes[1][0];
         height2 = newRegionSizes[1][1];
 
-        //Skapa de fyra nya Regionerna:
-        //Regionerna kanske inte är kvadratiska utan rektangulära med olika höjder och bredder så välj en gemensam höjd
-        //med varsin bredd.
-        //Om det endast finns två pixlar att arbeta med låter vi dem vara.
-        //behöver lägga till dem i finRegionListan.-
+        //Create the 4 new regions and put them in regionlist. If it isn't possible to create 4 new regions-
+        //put the remaining ones in the finished list.
         if (width1 > 0 && width2 > 0 && height1 > 0 && height2 > 0) {
 
             int[][] newRegion1 = new int[height1][width1];
@@ -96,10 +103,7 @@ public class SplitAndMergeAlgorithm {
             int[][] newRegion3 = new int[height2][width1];
             int[][] newRegion4 = new int[height2][width2];
 
-            //Fyll arrayerna med dess värden och ange startpositioner i totala bilden för x&y
-            //Hämta värden från regionArray
-            //  |R1|R2|
-            //  |R3|R4| } tillsammans regionArray
+            //Fill the new regions with pixel values.
             for (int row = 0; row < regionArray.length; row++) {
                 for (int col = 0; col < regionArray[row].length; col++) {
                     //Region 2
@@ -120,13 +124,13 @@ public class SplitAndMergeAlgorithm {
                     }
                 }
             }
-            //Lägg till de fyra nya regionerna i regionslistan.
+            //Finally add the new regions to the regionlist.
             regionList.add(new Region(newRegion1, region.getPosX() + 0, region.getPosY() + 0));
             regionList.add(new Region(newRegion2, region.getPosX() + width1, region.getPosY() + 0));
             regionList.add(new Region(newRegion3, region.getPosX() + 0, region.getPosY() + height1));
             regionList.add(new Region(newRegion4, region.getPosX() + width1, region.getPosY() + height1));
         }
-        //Om det endast finns två pixlar i arrayen-> dvs den går inte att splitta.
+        //If it isn't possible to split-> add the remaining pixels to the finished list as 1 pixel regions.
         else {
             for(int row=0;row<regionArray.length;row++){
                 for (int col=0;col<regionArray[row].length;col++){
@@ -137,11 +141,19 @@ public class SplitAndMergeAlgorithm {
         }
     }
 
+    /**
+     * Calculates the size of the new regions widths and heights.
+     * @param regionArray- array to calculate with.
+     * @return int[][]
+     */
     public int[][] calculateRegionSizes(int[][] regionArray){
          int[][] regionSize=new int[2][2];
-        //[0,0] [0,1] är width , [1,0] [1,1] är height
-        //Räkna ut regionsstorlekarna, dela på totalt antal pixlar med modolus.
-        //Börja med bredden: (width) modolus 2 (bredden ska splittas på två) dvs bredden får exakt pixel antal/2
+        //[0,0] [0,1] widths , [1,0] [1,1] heights
+
+        //Split the region with 2 and give width & height it's values. If the sides aren't even-> let on width/height be
+        //1 pixel bigger than the other.
+
+        //Width
         if (regionArray[0].length % 2 == 0) {
             regionSize[0][0] = regionArray[0].length / 2;
             regionSize[0][1] = regionArray[0].length / 2;
@@ -152,7 +164,7 @@ public class SplitAndMergeAlgorithm {
             regionSize[0][1]= (regionArray[0].length / 2) + 1;
         }
 
-        //Återupprepa för height
+        //Height
         if (regionArray.length % 2 == 0) {
             regionSize[1][0] = regionArray.length / 2;
             regionSize[1][1] = regionArray.length / 2;
@@ -163,22 +175,26 @@ public class SplitAndMergeAlgorithm {
         return regionSize;
     }
 
+    /**
+     * Merge the new output image with the Finished Regions with average values.
+     * @param width - width of image
+     * @param height- height of image
+     * @return WritableRaster
+     */
     public WritableRaster merge (int width,int height){
-       // int[][] finalImgArray=new int[height][width];
         BufferedImage img=new BufferedImage(width,height,BufferedImage.TYPE_BYTE_GRAY);
         WritableRaster outputRaster=img.getRaster();
-        //Merga ihop regionerna från finRegionList.
         System.out.println("Antal färdiga regioner:"+finRegionList.size());
+
+        //Merge
         for (int i=0;i<finRegionList.size();i++) {
             FinishedRegion temp=finRegionList.get(i);
             for (int row = 0; row < temp.getHeight(); row++) {
                 for (int col = 0; col < temp.getWidth(); col++) {
                     outputRaster.setSample(col+temp.getPosX(),row+temp.getPosY(),0,temp.getColorValue());
-                   // finalImgArray[row+temp.getPosY()][col+temp.getPosX()]=temp.getColorValue();
                 }
             }
         }
-
         return outputRaster;
     }
 

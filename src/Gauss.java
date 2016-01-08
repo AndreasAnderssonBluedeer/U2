@@ -4,7 +4,10 @@ import java.io.File;
 import java.io.IOException;
 
 import javax.imageio.ImageIO;
-
+/*
+    This class performs the Gaussian blur as a part of Canny's Method.
+    Created by Andreas Andersson & David Isberg on 2015-12-10.
+ */
 public class Gauss {
 
 	public WritableRaster filter(WritableRaster inPutRaster){
