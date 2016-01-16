@@ -34,19 +34,19 @@ public class SplitAndMergeAlgorithm {
         }
         //Add it as the first Region to the regionlist.
         regionList.add(new Region(imagevalues,0,0));
-        int average=0;
+
        //While there is Regions to test.
        while(regionList.size()>0){
-
+           int average=0;
             //Get the array,total number of pixels and calculate Average value.
             int [][] workingRegion=regionList.get(0).getArray();
-            int totaltNbrofPixels = workingRegion.length * workingRegion[0].length;
+            int totalNbrOfPixels = workingRegion.length * workingRegion[0].length;
             for (int row = 0; row < workingRegion.length; row++) {
                 for (int col = 0; col < workingRegion[row].length; col++) {
                     average += workingRegion[row][col];
                 }
             }
-            average = average / totaltNbrofPixels;
+            average = average / totalNbrOfPixels;
             int highThres, lowThres;
             //Set threshold in comparison to Average value.
             highThres = average + threshold;
@@ -55,11 +55,15 @@ public class SplitAndMergeAlgorithm {
             //Is this Region within the Average value?
             boolean withinThres=true;
             for (int row = 0; row < workingRegion.length; row++) {
-                for (int col = 0; col < workingRegion[row].length; col++) {
-                    if (workingRegion[row][col] >= lowThres && workingRegion[row][col] <= highThres) {
+                for (int col = 0; col < workingRegion[0].length; col++) {
+                    int value=workingRegion[row][col];
+                    if (value >= lowThres && value <= highThres) {
                     //The pixel is true compared to the Regions average value. Don't do anything.
                     } else {
                         withinThres=false;
+                        //Break loop->
+                        row=workingRegion.length;
+                        col=workingRegion[0].length;
                     }
                 }
             }
@@ -158,8 +162,7 @@ public class SplitAndMergeAlgorithm {
             regionSize[0][0] = regionArray[0].length / 2;
             regionSize[0][1] = regionArray[0].length / 2;
         } else {
-            //blir det ojämnt så gör en heltals division och låt region två få en pixel mer
-            // än den andra då det inte går att splitta en pixel.
+            //If uneven pixel number, let one region have one pixel more than the other.2
             regionSize[0][0] = regionArray[0].length / 2;
             regionSize[0][1]= (regionArray[0].length / 2) + 1;
         }
@@ -189,9 +192,13 @@ public class SplitAndMergeAlgorithm {
         //Merge
         for (int i=0;i<finRegionList.size();i++) {
             FinishedRegion temp=finRegionList.get(i);
+            int x,y,colorVal;
+            x=temp.getPosX();
+            y=temp.getPosY();
+            colorVal=temp.getColorValue();
             for (int row = 0; row < temp.getHeight(); row++) {
                 for (int col = 0; col < temp.getWidth(); col++) {
-                    outputRaster.setSample(col+temp.getPosX(),row+temp.getPosY(),0,temp.getColorValue());
+                    outputRaster.setSample(col+x,row+y,0,colorVal);
                 }
             }
         }
